@@ -2,3 +2,5 @@ Semana 8/07
 --> Decidimos quais os "objetos" que vamos analisar da cara (Tudo, relacionado com olhos)
 --> Começamos por estudar o comportamento dos pixels, de forma a identificar os pixeis vermelhos para a deteção de red eyes.
 --> criamos uma função (eye_roi) que procura esses pixeis dentro de um range.
+--> otimização da regiao dos olhos de forma a conseguir uma melhor percentagem de olhos vermelhos e com isto melhores resultados.
+--> adição do output
