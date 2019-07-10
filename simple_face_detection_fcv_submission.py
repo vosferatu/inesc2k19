@@ -2,6 +2,8 @@ import cv2
 import sys
 import os
 import matplotlib.pyplot as plt
+from imutils import face_utils
+from collections import OrderedDict
 
 # Define tests array
 tests = []
@@ -34,51 +36,28 @@ def detect(gray, frame):
         eyes_red_percentages = []
         for (ex, ey, ew, eh) in eyes:
             eyes_red_percentages.append(red_eye_test(roi_color, ex, ey, ew, eh))
-            centre = (ex+(ew/2), ey+(eh/2))
-            new_ex = centre[0] - (ew/4)
-            new_ey = centre[1] - (eh/4)
-            cv2.rectangle(roi_color, (new_ex, new_ey), (new_ex+ew/2, new_ey+eh/2), (0, 255, 0), 2)
+            centre = (ex+(ew//2), ey+(eh//2))
+            new_ex = centre[0] - (ew//4)
+            new_ey = centre[1] - (eh//4)
+            cv2.rectangle(roi_color, (new_ex, new_ey), ((new_ex+ew//2), (new_ey+eh//2)), (0, 255, 0), 2)
             cv2.imshow('img', frame)
+
         mean = sum(eyes_red_percentages)/2
-        value = 0
-        if(mean < 0.02):
-            value = 100
-        elif(mean < 0.04):
-            value = 90
-        elif(mean < 0.05):
-            value = 80
-        elif(mean < 0.06):
-            value = 70
-        elif(mean < 0.07):
-            value = 60
-        elif(mean < 0.08):
-            value = 50
-        elif(mean < 0.09):
-            value = 40
-        elif(mean < 0.1):
-            value = 30
-        elif(mean < 0.2):
-            value = 20
-        elif(mean < 0.3):
-            value = 10
-        elif(mean < 0.4):
-            value = 0
-        tests.append(["Test_14", value])
-    cv2.waitKey(0)
+        tests.append(["Test_14", f(mean)])
+        output = face_utils.visualize_facial_landmarks(frame, roi_color)
+        cv2.imshow("Image", output)
+        cv2.waitKey(0)
 
     # Now iterate over the faces and detect eyes
     for (x, y, w, h) in faces:
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
         # Arguements => image, top-left coordinates, bottomright coordinates, color, rectangle border thickness
-
         # we now need two region of interests(ROI) grey and color for eyes one to detect and another to draw rectangle
         roi_gray = gray[y:y+h, x:x+w]
         roi_color = frame[y:y+h, x:x+w]
         # Detect eyes now
         eyes = eyes_cascade.detectMultiScale(roi_gray, 1.1, 3)
-
         eye_center = {}
-
         for counter, (ex, ey, ew, eh) in enumerate(eyes):
             cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)
             eye_center[counter] = (ex+(ew/2), ey+(eh/2))
@@ -91,12 +70,12 @@ def red_eye_test(region, ex, ey, ew, eh):
     pixel_counter = 0.00
     red_pixel_counter = 0.00
     red_percentage = 0.00
-    centre = (ex+(ew/2), ey+(eh/2))
-    new_ex = centre[0] - (ew/4)
-    new_ey = centre[1] - (eh/4)
+    centre = (ex+(ew//2), ey+(eh//2))
+    new_ex = centre[0] - (ew//4)
+    new_ey = centre[1] - (eh//4)
     roi = region[new_ey:ey+eh, new_ex:ex+ew]
-    for i in range(0, eh/2):
-        for j in range(0, ew/2):
+    for i in range(0, eh//2):
+        for j in range(0, ew//2):
             pixel_counter += 1
             pixel = roi[i, j]
             if(130 < pixel[2] < 255 and pixel[0] < 100 and pixel[1] < 100):
@@ -105,21 +84,31 @@ def red_eye_test(region, ex, ey, ew, eh):
     red_percentage = red_pixel_counter/pixel_counter
     return red_percentage
 
-def red_eye_test_old(region, ex, ey, ew, eh):
-    pixel_counter = 0.00
-    red_pixel_counter = 0.00
-    red_percentage = 0.00
-    roi = region[ey:ey+eh, ex:ex+ew]
-    for i in range(0, eh):
-        for j in range(0, ew):
-            pixel_counter += 1
-            pixel = roi[i, j]
-            if(150 < pixel[2] < 255 and pixel[0] < 100 and pixel[1] < 100):
-                roi[i, j] = [255, 255, 0]
-                red_pixel_counter += 1
-    red_percentage = red_pixel_counter/pixel_counter
-    return red_percentage
+#function to get percentage
+def f(x):
+    return {
+        (x<0.02): 100,
+        (0.02<x<0.04): 90,
+        (0.04<x<0.05): 80,
+        (0.05<x<0.06): 70,
+        (0.06<x<0.07): 60,
+        (0.07<x<0.08): 50,
+        (0.08<x<0.09): 40,
+        (0.09<x<0.1): 30,
+        (0.1<x<0.2): 20,
+        (0.2<x<0.3): 10,
+    }.get(True)
 
+Eyes_landmarks = OrderedDict([("right_eye", (36,42)),("left_eye",(42,48))])
+
+def vis(image,shape,colors=None, alpha=0.75):
+    overlay = image.copy()
+    output = image.copy()
+    if colors is None:
+        colors = [(158,263,32),(163,38,32)]
+    for(i,name) in enumerate(Eyes_landmarks.keys()):
+        (j,k) = Eyes_landmarks[name]
+        pts = shape[j:k]
 
 if(len(sys.argv) != 3):
     print('Check.exe <faceimagefile> <outputfile>')
