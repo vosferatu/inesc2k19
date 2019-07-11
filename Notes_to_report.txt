@@ -4,3 +4,8 @@ Semana 8/07
 --> criamos uma função (eye_roi) que procura esses pixeis dentro de um range.
 --> otimização da regiao dos olhos de forma a conseguir uma melhor percentagem de olhos vermelhos e com isto melhores resultados.
 --> adição do output
+--> localização das landmarks dos olhos
+--> terminamos os red eyes (colocamos tudo em funçoes)
+--> iniciamos o teste10(eyes closed)
+--> determinamos a altura em pixeis para decidir percentagem de abertura.
+--> Começamos a detetar contornos(cabelo a frente dos olhos)
