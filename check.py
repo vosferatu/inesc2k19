@@ -3,23 +3,16 @@ import os
 import dlib
 import glob
 import cv2
-
-# function to convert open mouth percentage to compliance value
-def func9(x):
-    return {
-        (20 <= x < 30): 0,
-        (10 <= x < 20): 10,
-        (5 <= x < 10): 20,
-        (x < 5): 30,
-    }.get(True)
+import numpy as np
 
 # function to convert closed eye percentage to compliance value
 def func10(x):
     return {
-        (14 <= x < 20): 50,
-        (10 <= x < 14): 25,
-        (5 <= x < 10): 15,
-        (x < 5): 0,
+        (x >= 0.5): 50,
+        (0.3 <= x < 0.5): 35,
+        (0.1 <= x < 0.3): 25,
+        (0.01 <= x < 0.1): 15,
+        (x < 0.01): 0,
     }.get(True)
 
 # function to convert red eye percentage to compliance value
@@ -37,6 +30,15 @@ def func14(x):
         (0.45 < x < 0.50): 20,
         (0.50 < x < 0.55): 10,
         (x == 1): 0
+    }.get(True)
+
+# function to convert open mouth percentage to compliance value
+def func23(x):
+    return {
+        (20 <= x < 30): 0,
+        (10 <= x < 20): 10,
+        (5 <= x < 10): 20,
+        (x < 5): 30,
     }.get(True)
 
 # define and return each eye centre coordinates
@@ -62,7 +64,7 @@ def eye_centers(eyes):
     return [left_eye_centre, right_eye_centre]
 
 # define eye region and return red eye percentage
-def eye_region(roi, h, w):
+def red_eye_region(roi, h, w):
     pixel_counter = 0.00
     red_pixel_counter = 0.00
     red_percentage = 0.00
@@ -71,78 +73,87 @@ def eye_region(roi, h, w):
             pixel_counter += 1
             pixel = roi[k, j]
             if(130 < pixel[0] < 255 and pixel[1] < 100 and pixel[2] < 100):
-                roi[k, j] = [255, 255, 0]
                 red_pixel_counter += 1
     red_percentage = red_pixel_counter/pixel_counter
     return red_percentage
 
-# test9 (hair across eyes)
-def test9(mouth):
-    # top lip
-    point61 = mouth[0][0]
-    point62 = mouth[0][1]
-    point63 = mouth[0][2]
-    
-    # bottom lip 
-    point65 = mouth[1][0]
-    point66 = mouth[1][1]
-    point67 = mouth[1][2]
-
-    # left side distance
-    left_d = point67.y - point61.y
-    left_percentage = func9(left_d)
-    # centre distance
-    centre_d = point66.y - point62.y
-    centre_percentage = func9(centre_d)
-    # right side distance 
-    right_d = point65.y - point63.y
-    right_percentage = func9(right_d)
-    
-    return (left_percentage + centre_percentage + right_percentage)
+# define eye region and return sclera percentage
+def sclera_eye_region(roi, h, w):
+    pixel_counter = 0.00
+    sclera_pixel_counter = 0.00
+    sclera_percentage = 0.00
+    for k in range(0, h):
+        for j in range(0, w):
+            pixel_counter += 1
+            pixel = roi[k, j]
+            if(pixel == 0):
+                sclera_pixel_counter += 1
+    sclera_percentage = sclera_pixel_counter/pixel_counter
+    return sclera_percentage
 
 # test10 (closed eyes)
-def test10(eyes):
+def test10(gray, eyes):
     # left eye
-    point37 = eyes[0][0]
-    point38 = eyes[0][1]
-    point40 = eyes[0][2]
-    point41 = eyes[0][3]
+    point36 = eyes[0][0]
+    point37 = eyes[0][1]
+    point38 = eyes[0][2]
+    point39 = eyes[0][3]
+    point40 = eyes[0][4]
+    point41 = eyes[0][5]
     h_left = point41.y - point37.y
-    left_percentage = func10(h_left)
+    w_left = point39.x - point36.x
+    corner_left_x = point36.x
+    corner_left_y = point37.y
+    roi_left = gray[corner_left_y: corner_left_y + h_left, corner_left_x: corner_left_x + w_left]
+    left_eye_percentage = sclera_eye_region(roi_left, h_left, w_left)
 
     # right eye
-    point43 = eyes[1][0]
-    point44 = eyes[1][1]
-    point46 = eyes[1][2]
-    point47 = eyes[1][3]
+    point42 = eyes[1][0]
+    point43 = eyes[1][1]
+    point44 = eyes[1][2]
+    point45 = eyes[1][3]
+    point46 = eyes[1][4]
+    point47 = eyes[1][5]
     h_right = point47.y - point43.y
-    right_percentage = func10(h_right)
+    w_right = point45.x - point42.x
+    corner_right_x = point42.x
+    corner_right_y = point43.y
+    roi_right = gray[corner_right_y: corner_right_y + h_right, corner_right_x: corner_right_x + w_right]
+    right_eye_percentage = sclera_eye_region(roi_right, h_right, w_right)
 
-    tests.append(left_percentage + right_percentage)
-    return (left_percentage + right_percentage)
+    # draw eye region
+    rect = dlib.rectangle(corner_left_x, corner_left_y,
+                          corner_left_x + w_left, corner_left_y + h_left)
+    win.add_overlay(rect)
+    rect = dlib.rectangle(corner_right_x, corner_right_y,
+                          corner_right_x + w_right, corner_right_y + h_right)
+    win.add_overlay(rect)
+
+    tests.append(func10(left_eye_percentage) + func10(right_eye_percentage))
+    return func10(left_eye_percentage) + func10(right_eye_percentage)
 
 # test14 (red eyes)
 def test14(eyes):
     # left eye
-    point37 = eyes[0][0]
-    point38 = eyes[0][1]
-    point40 = eyes[0][2]
-    point41 = eyes[0][3]
+    point37 = eyes[0][1]
+    point38 = eyes[0][2]
+    point40 = eyes[0][4]
+    point41 = eyes[0][5]
     h_left = point41.y - point37.y
     w_left = point38.x - point37.x
     roi_left = img[point37.y:point37.y + h_left, point37.x:point37.x + w_left]
-    left_eye_percentage = eye_region(roi_left, h_left, w_left)
+    left_eye_percentage = red_eye_region(roi_left, h_left, w_left)
 
     # right eye
-    point43 = eyes[1][0]
-    point44 = eyes[1][1]
-    point46 = eyes[1][2]
-    point47 = eyes[1][3]
+    point43 = eyes[1][1]
+    point44 = eyes[1][2]
+    point46 = eyes[1][4]
+    point47 = eyes[1][5]
     h_right = point47.y - point43.y
     w_right = point44.x - point43.x
     roi_right = img[point43.y:point43.y +
                     h_right, point43.x:point43.x + w_right]
-    right_eye_percentage = eye_region(roi_right, h_right, w_right)
+    right_eye_percentage = red_eye_region(roi_right, h_right, w_right)
 
     # draw eye region
     rect = dlib.rectangle(point37.x, point37.y,
@@ -157,6 +168,29 @@ def test14(eyes):
     tests.append(func14(mean))
     return(func14(mean))
 
+# test23 (mouth open)
+def test23(mouth):
+    # top lip
+    point61 = mouth[0][0]
+    point62 = mouth[0][1]
+    point63 = mouth[0][2]
+    
+    # bottom lip 
+    point65 = mouth[1][0]
+    point66 = mouth[1][1]
+    point67 = mouth[1][2]
+
+    # left side distance
+    left_d = point67.y - point61.y
+    left_percentage = func23(left_d)
+    # centre distance
+    centre_d = point66.y - point62.y
+    centre_percentage = func23(centre_d)
+    # right side distance 
+    right_d = point65.y - point63.y
+    right_percentage = func23(right_d)
+    
+    return (left_percentage + centre_percentage + right_percentage)
 
 # paths to files
 predictor_path = 'shape_predictor_68_face_landmarks.dat'
@@ -177,6 +211,10 @@ mouth = []
 
 img = dlib.load_rgb_image(face)
 
+image = cv2.imread(face)
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+
 win.clear_overlay()
 win.set_image(img)
 
@@ -189,10 +227,10 @@ for k, d in enumerate(dets):
     # Get the landmarks/parts for the face in box d.
     shape = predictor(img, d)
     # left eye landmarks
-    eyes.append([shape.part(37), shape.part(38),
+    eyes.append([shape.part(36), shape.part(37), shape.part(38), shape.part(39),
                  shape.part(40), shape.part(41)])
     # right eye landmarks
-    eyes.append([shape.part(43), shape.part(44),
+    eyes.append([shape.part(42), shape.part(43), shape.part(44), shape.part(45),
                  shape.part(46), shape.part(47)])
     # top lip landmarks
     mouth.append([shape.part(61), shape.part(62), shape.part(63)])
@@ -203,9 +241,9 @@ for k, d in enumerate(dets):
 
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
-test9 = test9(mouth)
-test10 = test10(eyes)
+test10 = test10(thresh, eyes)
 test14 = test14(eyes)
+test23 = test23(mouth)
 
 
 # write results to file
@@ -214,11 +252,11 @@ file.write("\n")
 file.write(str(eye_centre_coordinates[0][0]) + " " + str(eye_centre_coordinates[0][1]) +
            " " + str(eye_centre_coordinates[1][0]) + " " + str(eye_centre_coordinates[1][1]))
 file.write("\n")
-file.write("Test9 " + str(test9))
-file.write("\n")
 file.write("Test10 " + str(test10))
 file.write("\n")
 file.write("Test14 " + str(test14))
+file.write("\n")
+file.write("Test23 " + str(test23))
 file.write("\n")
 file.close()
 
