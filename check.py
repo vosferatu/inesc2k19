@@ -1,5 +1,6 @@
 import sys
 import os
+import math 
 import dlib
 import glob
 import cv2
@@ -45,18 +46,18 @@ def func23(x):
 def eye_centers(eyes):
     # left eye
     left_eye_centre = []
-    point37 = eyes[0][0]
-    point38 = eyes[0][1]
-    point41 = eyes[0][3]
+    point37 = eyes[0][1]
+    point38 = eyes[0][2]
+    point41 = eyes[0][5]
     h_left = point41.y - point37.y
     w_left = point38.x - point37.x
     left_eye_centre = [point37.x + (w_left/2), point37.y + (h_left/2)]
 
     # right eye
     right_eye_centre = []
-    point43 = eyes[1][0]
-    point44 = eyes[1][1]
-    point47 = eyes[1][3]
+    point43 = eyes[1][1]
+    point44 = eyes[1][2]
+    point47 = eyes[1][5]
     h_right = point47.y - point43.y
     w_right = point44.x - point43.x
     right_eye_centre = [point43.x + (w_right/2), point43.y + (h_right/2)]
@@ -131,6 +132,47 @@ def test10(gray, eyes):
 
     tests.append(func10(left_eye_percentage) + func10(right_eye_percentage))
     return func10(left_eye_percentage) + func10(right_eye_percentage)
+
+# test12 (roll/pitch/yaw)
+def test12(eyes, nose, mouth_upper_bound):
+    left_eye_centre = eyes[0]
+    right_eye_centre = eyes[1]
+    nose_tip_point30 = nose[0][0]
+
+    # deviation between eye centre line and  x-axis 
+    deltay = (right_eye_centre[1] - left_eye_centre[1])
+    deltax = (right_eye_centre[0] - left_eye_centre[0])
+    m = float(deltay) / float(deltax)
+    angle = math.degrees(math.atan(m))
+    print(angle)
+
+    # distance between the center of the eyes and the tip of the nose
+    left_eye_distance_nose_tip = math.sqrt(((left_eye_centre[0]-nose_tip_point30.x)**2)+((left_eye_centre[1]-nose_tip_point30.y)**2))
+    print(left_eye_distance_nose_tip)
+    line = dlib.line(dlib.point(left_eye_centre[0], left_eye_centre[1]), nose_tip_point30)
+    win.add_overlay(line)
+    right_eye_distance_nose_tip = math.sqrt(((right_eye_centre[0]-nose_tip_point30.x)**2)+((right_eye_centre[1]-nose_tip_point30.y)**2))
+    print(right_eye_distance_nose_tip)
+    line = dlib.line(dlib.point(right_eye_centre[0], right_eye_centre[1]), nose_tip_point30)
+    win.add_overlay(line)
+
+    # distance between the center of the eyes and the upper bound of the mouth
+    left_eye_distance_mouth_upper_bound = math.sqrt(((left_eye_centre[0]-mouth_upper_bound.x)**2)+((left_eye_centre[1]-mouth_upper_bound.y)**2))
+    print(left_eye_distance_mouth_upper_bound)
+    line = dlib.line(dlib.point(left_eye_centre[0], left_eye_centre[1]), mouth_upper_bound)
+    win.add_overlay(line)
+    right_eye_distance_mouth_upper_bound = math.sqrt(((right_eye_centre[0]-mouth_upper_bound.x)**2)+((right_eye_centre[1]-mouth_upper_bound.y)**2))
+    print(right_eye_distance_mouth_upper_bound)
+    line = dlib.line(dlib.point(right_eye_centre[0], right_eye_centre[1]), mouth_upper_bound)
+    win.add_overlay(line)
+
+    # distance between the tip of the nose and the upper bound of the mouth.
+    nose_distance_mouth_upper_bound = math.sqrt(((nose_tip_point30.x-mouth_upper_bound.x)**2)+((nose_tip_point30.y-mouth_upper_bound.y)**2))
+    print(nose_distance_mouth_upper_bound)
+    line = dlib.line(nose_tip_point30, mouth_upper_bound)
+    win.add_overlay(line)
+
+    return None
 
 # test14 (red eyes)
 def test14(eyes):
@@ -207,6 +249,7 @@ win = dlib.image_window()
 tests = []
 eyes = []
 eye_centre_coordinates = []
+nose_tip = []
 mouth = []
 
 img = dlib.load_rgb_image(face)
@@ -232,6 +275,10 @@ for k, d in enumerate(dets):
     # right eye landmarks
     eyes.append([shape.part(42), shape.part(43), shape.part(44), shape.part(45),
                  shape.part(46), shape.part(47)])
+    # nose tip landmarks
+    nose_tip.append([shape.part(30), shape.part(31), shape.part(32), shape.part(33), shape.part(34), shape.part(35)])
+    # mouth upper bound landmark
+    mouth_upper_bound = shape.part(51)
     # top lip landmarks
     mouth.append([shape.part(61), shape.part(62), shape.part(63)])
     # bottom lip landmarks
@@ -242,6 +289,7 @@ for k, d in enumerate(dets):
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
 test10 = test10(thresh, eyes)
+test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
 test14 = test14(eyes)
 test23 = test23(mouth)
 
