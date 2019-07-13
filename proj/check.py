@@ -107,7 +107,7 @@ def sclera_eye_region(roi, h, w):
 # TEST 12 #
 
 # test12 (roll/pitch/yaw)
-def test12(eyes, nose, mouth_upper_bound):
+#def test12(eyes, nose, mouth_upper_bound):
     left_eye_centre = eyes[0]
     right_eye_centre = eyes[1]
     nose_tip_point30 = nose[0][0]
@@ -311,10 +311,13 @@ for k, d in enumerate(dets):
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
 test10 = test10(thresh, eyes)
-test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
+#test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
 test14 = test14(eyes)
-test23 = test23(mouth)
-
+try:
+    if((test14) > 50):
+        test23 = test23(mouth)
+except:
+    print("Red eyes can't performe test 23 in this picture")
 
 # write results to file
 file.write(face)
