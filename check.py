@@ -1,12 +1,14 @@
 import sys
 import os
-import math 
+import math
 import dlib
 import glob
 import cv2
 import numpy as np
 
 # function to convert closed eye percentage to compliance value
+
+
 def func10(x):
     return {
         (x >= 0.5): 50,
@@ -17,6 +19,8 @@ def func10(x):
     }.get(True)
 
 # function to convert red eye percentage to compliance value
+
+
 def func14(x):
     return {
         (x < 0.05): 100,
@@ -34,6 +38,8 @@ def func14(x):
     }.get(True)
 
 # function to convert open mouth percentage to compliance value
+
+
 def func23(x):
     return {
         (20 <= x < 30): 0,
@@ -43,6 +49,8 @@ def func23(x):
     }.get(True)
 
 # define and return each eye centre coordinates
+
+
 def eye_centers(eyes):
     # left eye
     left_eye_centre = []
@@ -65,6 +73,8 @@ def eye_centers(eyes):
     return [left_eye_centre, right_eye_centre]
 
 # define eye region and return red eye percentage
+
+
 def red_eye_region(roi, h, w):
     pixel_counter = 0.00
     red_pixel_counter = 0.00
@@ -79,6 +89,8 @@ def red_eye_region(roi, h, w):
     return red_percentage
 
 # define eye region and return sclera percentage
+
+
 def sclera_eye_region(roi, h, w):
     pixel_counter = 0.00
     sclera_pixel_counter = 0.00
@@ -93,6 +105,8 @@ def sclera_eye_region(roi, h, w):
     return sclera_percentage
 
 # test10 (closed eyes)
+
+
 def test10(gray, eyes):
     # left eye
     point36 = eyes[0][0]
@@ -105,7 +119,8 @@ def test10(gray, eyes):
     w_left = point39.x - point36.x
     corner_left_x = point36.x
     corner_left_y = point37.y
-    roi_left = gray[corner_left_y: corner_left_y + h_left, corner_left_x: corner_left_x + w_left]
+    roi_left = gray[corner_left_y: corner_left_y +
+                    h_left, corner_left_x: corner_left_x + w_left]
     left_eye_percentage = sclera_eye_region(roi_left, h_left, w_left)
 
     # right eye
@@ -119,7 +134,8 @@ def test10(gray, eyes):
     w_right = point45.x - point42.x
     corner_right_x = point42.x
     corner_right_y = point43.y
-    roi_right = gray[corner_right_y: corner_right_y + h_right, corner_right_x: corner_right_x + w_right]
+    roi_right = gray[corner_right_y: corner_right_y +
+                     h_right, corner_right_x: corner_right_x + w_right]
     right_eye_percentage = sclera_eye_region(roi_right, h_right, w_right)
 
     # draw eye region
@@ -134,12 +150,14 @@ def test10(gray, eyes):
     return func10(left_eye_percentage) + func10(right_eye_percentage)
 
 # test12 (roll/pitch/yaw)
+
+
 def test12(eyes, nose, mouth_upper_bound):
     left_eye_centre = eyes[0]
     right_eye_centre = eyes[1]
     nose_tip_point30 = nose[0][0]
 
-    # deviation between eye centre line and  x-axis 
+    # deviation between eye centre line and  x-axis
     deltay = (right_eye_centre[1] - left_eye_centre[1])
     deltax = (right_eye_centre[0] - left_eye_centre[0])
     m = float(deltay) / float(deltax)
@@ -147,27 +165,36 @@ def test12(eyes, nose, mouth_upper_bound):
     print(angle)
 
     # distance between the center of the eyes and the tip of the nose
-    left_eye_distance_nose_tip = math.sqrt(((left_eye_centre[0]-nose_tip_point30.x)**2)+((left_eye_centre[1]-nose_tip_point30.y)**2))
+    left_eye_distance_nose_tip = math.sqrt(
+        ((left_eye_centre[0]-nose_tip_point30.x)**2)+((left_eye_centre[1]-nose_tip_point30.y)**2))
     print(left_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(left_eye_centre[0], left_eye_centre[1]), nose_tip_point30)
+    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(
+        left_eye_centre[1])), nose_tip_point30)
     win.add_overlay(line)
-    right_eye_distance_nose_tip = math.sqrt(((right_eye_centre[0]-nose_tip_point30.x)**2)+((right_eye_centre[1]-nose_tip_point30.y)**2))
+    right_eye_distance_nose_tip = math.sqrt(
+        ((right_eye_centre[0]-nose_tip_point30.x)**2)+((right_eye_centre[1]-nose_tip_point30.y)**2))
     print(right_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(right_eye_centre[0], right_eye_centre[1]), nose_tip_point30)
+    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(
+        right_eye_centre[1])), nose_tip_point30)
     win.add_overlay(line)
 
     # distance between the center of the eyes and the upper bound of the mouth
-    left_eye_distance_mouth_upper_bound = math.sqrt(((left_eye_centre[0]-mouth_upper_bound.x)**2)+((left_eye_centre[1]-mouth_upper_bound.y)**2))
+    left_eye_distance_mouth_upper_bound = math.sqrt(
+        ((left_eye_centre[0]-mouth_upper_bound.x)**2)+((left_eye_centre[1]-mouth_upper_bound.y)**2))
     print(left_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(left_eye_centre[0], left_eye_centre[1]), mouth_upper_bound)
+    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(
+        left_eye_centre[1])), mouth_upper_bound)
     win.add_overlay(line)
-    right_eye_distance_mouth_upper_bound = math.sqrt(((right_eye_centre[0]-mouth_upper_bound.x)**2)+((right_eye_centre[1]-mouth_upper_bound.y)**2))
+    right_eye_distance_mouth_upper_bound = math.sqrt(
+        ((right_eye_centre[0]-mouth_upper_bound.x)**2)+((right_eye_centre[1]-mouth_upper_bound.y)**2))
     print(right_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(right_eye_centre[0], right_eye_centre[1]), mouth_upper_bound)
+    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(
+        right_eye_centre[1])), mouth_upper_bound)
     win.add_overlay(line)
 
     # distance between the tip of the nose and the upper bound of the mouth.
-    nose_distance_mouth_upper_bound = math.sqrt(((nose_tip_point30.x-mouth_upper_bound.x)**2)+((nose_tip_point30.y-mouth_upper_bound.y)**2))
+    nose_distance_mouth_upper_bound = math.sqrt(
+        ((nose_tip_point30.x-mouth_upper_bound.x)**2)+((nose_tip_point30.y-mouth_upper_bound.y)**2))
     print(nose_distance_mouth_upper_bound)
     line = dlib.line(nose_tip_point30, mouth_upper_bound)
     win.add_overlay(line)
@@ -175,6 +202,8 @@ def test12(eyes, nose, mouth_upper_bound):
     return None
 
 # test14 (red eyes)
+
+
 def test14(eyes):
     # left eye
     point37 = eyes[0][1]
@@ -211,13 +240,15 @@ def test14(eyes):
     return(func14(mean))
 
 # test23 (mouth open)
+
+
 def test23(mouth):
     # top lip
     point61 = mouth[0][0]
     point62 = mouth[0][1]
     point63 = mouth[0][2]
-    
-    # bottom lip 
+
+    # bottom lip
     point65 = mouth[1][0]
     point66 = mouth[1][1]
     point67 = mouth[1][2]
@@ -228,11 +259,12 @@ def test23(mouth):
     # centre distance
     centre_d = point66.y - point62.y
     centre_percentage = func23(centre_d)
-    # right side distance 
+    # right side distance
     right_d = point65.y - point63.y
     right_percentage = func23(right_d)
-    
+
     return (left_percentage + centre_percentage + right_percentage)
+
 
 # paths to files
 predictor_path = 'shape_predictor_68_face_landmarks.dat'
@@ -256,7 +288,8 @@ img = dlib.load_rgb_image(face)
 
 image = cv2.imread(face)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+ret, thresh = cv2.threshold(
+    gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
 win.clear_overlay()
 win.set_image(img)
@@ -276,7 +309,8 @@ for k, d in enumerate(dets):
     eyes.append([shape.part(42), shape.part(43), shape.part(44), shape.part(45),
                  shape.part(46), shape.part(47)])
     # nose tip landmarks
-    nose_tip.append([shape.part(30), shape.part(31), shape.part(32), shape.part(33), shape.part(34), shape.part(35)])
+    nose_tip.append([shape.part(30), shape.part(31), shape.part(
+        32), shape.part(33), shape.part(34), shape.part(35)])
     # mouth upper bound landmark
     mouth_upper_bound = shape.part(51)
     # top lip landmarks

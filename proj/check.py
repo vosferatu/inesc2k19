@@ -140,21 +140,21 @@ def test12(eyes, nose, mouth_upper_bound):
     # distance between the center of the eyes and the tip of the nose
     left_eye_distance_nose_tip = math.sqrt(((left_eye_centre[0]-nose_tip_point30.x)**2)+((left_eye_centre[1]-nose_tip_point30.y)**2))
     print(left_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(left_eye_centre[0], left_eye_centre[1]), nose_tip_point30)
+    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(left_eye_centre[1])), nose_tip_point30)
     win.add_overlay(line)
     right_eye_distance_nose_tip = math.sqrt(((right_eye_centre[0]-nose_tip_point30.x)**2)+((right_eye_centre[1]-nose_tip_point30.y)**2))
     print(right_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(right_eye_centre[0], right_eye_centre[1]), nose_tip_point30)
+    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(right_eye_centre[1])), nose_tip_point30)
     win.add_overlay(line)
 
     # distance between the center of the eyes and the upper bound of the mouth
     left_eye_distance_mouth_upper_bound = math.sqrt(((left_eye_centre[0]-mouth_upper_bound.x)**2)+((left_eye_centre[1]-mouth_upper_bound.y)**2))
     print(left_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(left_eye_centre[0], left_eye_centre[1]), mouth_upper_bound)
+    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(left_eye_centre[1])), mouth_upper_bound)
     win.add_overlay(line)
     right_eye_distance_mouth_upper_bound = math.sqrt(((right_eye_centre[0]-mouth_upper_bound.x)**2)+((right_eye_centre[1]-mouth_upper_bound.y)**2))
     print(right_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(right_eye_centre[0], right_eye_centre[1]), mouth_upper_bound)
+    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(right_eye_centre[1])), mouth_upper_bound)
     win.add_overlay(line)
 
     # distance between the tip of the nose and the upper bound of the mouth.
