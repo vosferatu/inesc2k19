@@ -39,6 +39,24 @@ def eye_centers(eyes):
 
 # TEST 10 #
 
+def detect_eyes(faces, img, eye_cascade):
+    eye_counter = 0
+    for (x,y,w,h) in faces:
+        cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
+        roi_gray = gray[y:y+h, x:x+w]
+        roi_color = img[y:y+h, x:x+w]
+        eyes = eye_cascade.detectMultiScale(roi_gray)
+        for (ex,ey,ew,eh) in eyes:
+            eye_counter += 1
+            cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
+    if(eye_counter == 2):
+        return str("2 eyes open")
+    elif(eye_counter == 1):
+        return str("1 eye open")
+    else:
+        return str("both closed")
+
+
 # test10 (closed eyes)
 def test10(gray, eyes):
     # left eye
@@ -107,7 +125,7 @@ def sclera_eye_region(roi, h, w):
 # TEST 12 #
 
 # test12 (roll/pitch/yaw)
-#def test12(eyes, nose, mouth_upper_bound):
+def test12(eyes, nose, mouth_upper_bound):
     left_eye_centre = eyes[0]
     right_eye_centre = eyes[1]
     nose_tip_point30 = nose[0][0]
@@ -276,8 +294,11 @@ mouth = []
 
 img = dlib.load_rgb_image(face)
 
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 image = cv2.imread(face)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
 win.clear_overlay()
@@ -310,14 +331,10 @@ for k, d in enumerate(dets):
 
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
-test10 = test10(thresh, eyes)
+eyes_close = detect_eyes(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
+#test10 = test10(thresh, eyes)
 #test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
 test14 = test14(eyes)
-try:
-    if((test14) > 50):
-        test23 = test23(mouth)
-except:
-    print("Red eyes can't performe test 23 in this picture")
 
 # write results to file
 file.write(face)
@@ -325,12 +342,20 @@ file.write("\n")
 file.write(str(eye_centre_coordinates[0][0]) + " " + str(eye_centre_coordinates[0][1]) +
            " " + str(eye_centre_coordinates[1][0]) + " " + str(eye_centre_coordinates[1][1]))
 file.write("\n")
-file.write("Test10 " + str(test10))
+file.write("Test10 " + str(eyes_close))
 file.write("\n")
 file.write("Test14 " + str(test14))
 file.write("\n")
-file.write("Test23 " + str(test23))
-file.write("\n")
+try:
+    if((test14) > 50):
+        test23 = test23(mouth)
+        file.write("Test23 " + str(test23))
+        file.write("\n")
+except Exception as e:
+    test23 = str("Red eyes can't performe test 23 in this picture")
+    file.write("Test23 " + str(test23))
+    file.write("\n")
+
 file.close()
 
 win.add_overlay(dets)
