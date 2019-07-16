@@ -265,7 +265,11 @@ def test23(mouth):
 
 # function to convert open mouth percentage to compliance value
 def func23(x, max):
-    return (x*100) / max
+    percentage = (x*100) / max
+    if(percentage < 0):
+        return 0
+    else:
+        return percentage
 
 
 ########
@@ -298,7 +302,6 @@ image = cv2.imread(face)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
-
 win.clear_overlay()
 win.set_image(img)
 
