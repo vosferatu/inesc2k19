@@ -165,6 +165,73 @@ def test12(eyes, nose, mouth_upper_bound):
 
     return None
 
+# roll,pitch,yaw
+def rpy(image, points):
+    size = image.shape
+    #2D image points. If you change the image, you need to change vector
+    image_points = np.array([
+                            (points[0].x, points[0].y),     # Nose tip
+                            (points[1].x, points[1].y),     # Chin
+                            (points[2].x, points[2].y),     # Left eye left corner
+                            (points[3].x, points[3].y),     # Right eye right corne
+                            (points[4].x, points[4].y),     # Left Mouth corner
+                            (points[5].x, points[5].y)      # Right mouth corner
+                        ], dtype="double")
+ 
+    # 3D model points.
+    model_points = np.array([
+                            (0.0, 0.0, 0.0),             # Nose tip
+                            (0.0, -330.0, -65.0),        # Chin
+                            (-225.0, 170.0, -135.0),     # Left eye left corner
+                            (225.0, 170.0, -135.0),      # Right eye right corne
+                            (-150.0, -150.0, -125.0),    # Left Mouth corner
+                            (150.0, -150.0, -125.0)      # Right mouth corner
+                         
+                        ])
+ 
+    
+    # Camera internals
+    focal_length = size[1]
+    center = (size[1]/2, size[0]/2)
+    camera_matrix = np.array(
+                         [[focal_length, 0, center[0]],
+                         [0, focal_length, center[1]],
+                         [0, 0, 1]], dtype = "double"
+                         )
+ 
+    #print("Camera Matrix :\n {0}".format(camera_matrix))
+ 
+    dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
+    (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)
+ 
+    #print("Rotation Vector:\n {0}".format(rotation_vector))
+    #print("Translation Vector:\n {0}".format(translation_vector))
+        
+    rvec_matrix = cv2.Rodrigues(rotation_vector)[0]
+    proj_matrix = np.hstack((rvec_matrix, translation_vector))
+    eulerAngles = -cv2.decomposeProjectionMatrix(proj_matrix)[6] 
+
+    pitch, yaw, roll = [math.radians(_) for _ in eulerAngles]
+    pitch = math.degrees(math.asin(math.sin(pitch)))
+    roll = -math.degrees(math.asin(math.sin(roll)))
+    yaw = math.degrees(math.asin(math.sin(yaw)))
+    print(pitch)
+    print(roll)
+    print(yaw)
+    # Project a 3D point (0, 0, 1000.0) onto the image plane.
+    # We use this to draw a line sticking out of the nose
+    (nose_end_point2D, jacobian) = cv2.projectPoints(np.array([(0.0, 0.0, 1000.0)]), rotation_vector, translation_vector, camera_matrix, dist_coeffs)
+ 
+    for p in image_points:
+        cv2.circle(image, (int(p[0]), int(p[1])), 3, (0,0,255), -1)
+ 
+    p1 = dlib.point(( int(image_points[0][0]), int(image_points[0][1])))
+    p2 = dlib.point(( int(nose_end_point2D[0][0][0]), int(nose_end_point2D[0][0][1])))
+    
+    line = dlib.line(p1, p2)
+    win.add_overlay(line)
+    return None
+    
 # TEST 14 #
 
 # test14 (red eyes)
@@ -271,6 +338,56 @@ def func23(x, max):
     else:
         return percentage
 
+# HAIR TEST #
+
+# hairtest 
+def check_hair(hair, eyes):
+    # left eye
+    point37 = eyes[0][1]
+    point38 = eyes[0][2]
+    point40 = eyes[0][4]
+    point41 = eyes[0][5]
+    h_left = point41.y - point37.y
+    w_left = point38.x - point37.x
+    roi_left = img[point37.y:point37.y + h_left, point37.x:point37.x + w_left]
+    left_eye_percentage = hair_eye_region(roi_left, h_left, w_left)
+    print(left_eye_percentage)
+
+    # right eye
+    point43 = eyes[1][1]
+    point44 = eyes[1][2]
+    point46 = eyes[1][4]
+    point47 = eyes[1][5]
+    h_right = point47.y - point43.y
+    w_right = point44.x - point43.x
+    roi_right = img[point43.y:point43.y +
+                    h_right, point43.x:point43.x + w_right]
+    right_eye_percentage = hair_eye_region(roi_right, h_right, w_right)
+    print(right_eye_percentage)
+
+    # draw eye region
+    rect = dlib.rectangle(point37.x, point37.y,
+                          point37.x + w_left, point37.y + h_left)
+    win.add_overlay(rect)
+    rect = dlib.rectangle(point43.x, point43.y,
+                          point43.x + w_right, point43.y + h_right)
+    win.add_overlay(rect)
+
+    return None
+
+# define eye region and return hair percentage in eye
+def hair_eye_region(roi, h, w):
+    pixel_counter = 0.00
+    hair_pixel_counter = 0.00
+    hair_percentage = 0.00
+    for k in range(0, h):
+        for j in range(0, w):
+            pixel_counter += 1
+            pixel = roi[k, j]
+            if(pixel[0] > 90 and pixel[1] > 90 and pixel[2] > 90):
+                hair_pixel_counter += 1
+    hair_percentage = hair_pixel_counter/pixel_counter
+    return hair_percentage
 
 ########
 # MAIN #
@@ -293,6 +410,7 @@ eyes = []
 eye_centre_coordinates = []
 nose_tip = []
 mouth = []
+points = []
 
 img = dlib.load_rgb_image(face)
 
@@ -317,16 +435,12 @@ h, w = image.shape[:2]
 mask = np.zeros((h, w), np.uint8)
 # Draw the contour on the new mask and perform the bitwise operation
 cv2.drawContours(mask, [cnt],-1, 255, -1)
-res = cv2.bitwise_and(image, image, mask=mask)
-# Display the result
-#cv2.imwrite(IMD+'.png', res)
-#mask2 = Image.open(IMD+'.png')
-#cv2.imshow('img', res)
+hair_res = cv2.bitwise_and(image, image, mask=mask)
 
-#win.add_overlay(res)
 
 win.clear_overlay()
-win.set_image(res)
+win.set_image(img)
+#win.set_image(hair_res)
 
 # Ask the detector to find the bounding boxes of each face. The 1 in the
 # second argument indicates that we should upsample the image 1 time. This
@@ -350,15 +464,24 @@ for k, d in enumerate(dets):
     mouth.append([shape.part(61), shape.part(62), shape.part(63), shape.part(60)])
     # bottom lip landmarks
     mouth.append([shape.part(65), shape.part(66), shape.part(67), shape.part(64)])
+
+    points.append(shape.part(30))
+    points.append(shape.part(8))
+    points.append(shape.part(36))
+    points.append(shape.part(45))
+    points.append(shape.part(48))
+    points.append(shape.part(54))
     # Draw the face landmarks on the screen.
     win.add_overlay(shape)
 
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
-test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
-test14 = test14(eyes)
-test23 = test23(mouth)
+rpy_result = rpy(image, points)
+#test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
+#test14 = test14(eyes)
+#test23 = test23(mouth)
+hair = check_hair(hair_res, eyes)
 
 # write results to file
 file.write(face)
