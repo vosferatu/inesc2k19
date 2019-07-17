@@ -5,7 +5,7 @@ import dlib
 import glob
 import cv2
 import numpy as np
-
+#from PIL import Image
 
 #############
 # FUNCTIONS #
@@ -302,8 +302,31 @@ image = cv2.imread(face)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+IMD = 'IMD436'
+# Remove hair with opening
+kernel = np.ones((2,2),np.uint8)
+opening = cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel, iterations = 2)
+# Blur the image for smoother ROI
+blur = cv2.blur(opening,(15,15))
+# Perform another OTSU threshold and search for biggest contour
+ret, thresh = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
+cnt = max(contours, key=cv2.contourArea)
+# Create a new mask for the result image
+h, w = image.shape[:2]
+mask = np.zeros((h, w), np.uint8)
+# Draw the contour on the new mask and perform the bitwise operation
+cv2.drawContours(mask, [cnt],-1, 255, -1)
+res = cv2.bitwise_and(image, image, mask=mask)
+# Display the result
+#cv2.imwrite(IMD+'.png', res)
+#mask2 = Image.open(IMD+'.png')
+#cv2.imshow('img', res)
+
+#win.add_overlay(res)
+
 win.clear_overlay()
-win.set_image(img)
+win.set_image(res)
 
 # Ask the detector to find the bounding boxes of each face. The 1 in the
 # second argument indicates that we should upsample the image 1 time. This
@@ -333,7 +356,6 @@ for k, d in enumerate(dets):
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
-#test10 = test10(thresh, eyes)
 test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
 test14 = test14(eyes)
 test23 = test23(mouth)
