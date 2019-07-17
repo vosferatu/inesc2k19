@@ -39,7 +39,7 @@ def eye_centers(eyes):
 
 # TEST 10 #
 
-def detect_eyes(faces, img, eye_cascade):
+def test10(faces, img, eye_cascade):
     eye_counter = 0
     for (x,y,w,h) in faces:
         cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
@@ -50,15 +50,15 @@ def detect_eyes(faces, img, eye_cascade):
             eye_counter += 1
             cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
     if(eye_counter == 2):
-        return str("2 eyes open")
+        return True
     elif(eye_counter == 1):
-        return str("1 eye open")
+        return True
     else:
-        return str("both closed")
+        return False
 
 
 # test10 (closed eyes)
-def test10(gray, eyes):
+def eye_Pcnt(gray, eyes):
     # left eye
     point36 = eyes[0][0]
     point37 = eyes[0][1]
@@ -332,7 +332,7 @@ for k, d in enumerate(dets):
 
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
-eyes_close = detect_eyes(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
+teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
 #test10 = test10(thresh, eyes)
 test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
 test14 = test14(eyes)
@@ -343,8 +343,14 @@ file.write(face)
 file.write("\n")
 file.write(str(eye_centre_coordinates[0][0]) + " " + str(eye_centre_coordinates[0][1]) +
            " " + str(eye_centre_coordinates[1][0]) + " " + str(eye_centre_coordinates[1][1]))
-file.write("\n")
-file.write("Test10 " + str(eyes_close))
+if(teste10 == True):
+    eyes_close = eye_Pcnt(thresh, eyes)
+    file.write("\n")
+    file.write("Test10 " + str(eyes_close))
+elif(teste10 == False):
+    eyes_close = eye_Pcnt(thresh, eyes)
+    file.write("\n")
+    file.write("Test10 " + str(0))
 file.write("\n")
 file.write("Test14 " + str(test14))
 file.write("\n")
