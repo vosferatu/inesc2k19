@@ -1,11 +1,36 @@
+###########
+# TAREFAS #
+###########
+
 Semana 8/07
 --> Decidimos quais os "objetos" que vamos analisar da cara (Tudo, relacionado com olhos)
---> Começamos por estudar o comportamento dos pixels, de forma a identificar os pixeis vermelhos para a deteção de red eyes.
---> criamos uma função (eye_roi) que procura esses pixeis dentro de um range.
---> otimização da regiao dos olhos de forma a conseguir uma melhor percentagem de olhos vermelhos e com isto melhores resultados.
+--> Começamos por estudar o comportamento dos pixels, de forma a identificar os pixéis vermelhos para a deteção de red eyes.
+--> criamos uma função (eye_roi) que procura esses pixéis dentro de um range.
+--> otimização da região dos olhos de forma a conseguir uma melhor percentagem de olhos vermelhos e com isto melhores resultados.
 --> adição do output
 --> localização das landmarks dos olhos
---> terminamos os red eyes (colocamos tudo em funçoes)
+--> terminamos os red eyes (colocamos tudo em funções)
 --> iniciamos o teste10(eyes closed)
---> determinamos a altura em pixeis para decidir percentagem de abertura.
+--> determinamos a altura em pixéis para decidir percentagem de abertura.
 --> Começamos a detetar contornos(cabelo a frente dos olhos)
+--> criação de contraste para identificar a sclera para fazermos a proporção para sabermos se os olhos estão abertos ou fechados, para isto utilizamos um threshold
+--> No caso de olhos vermelhos, remover os olhos vermelhos e polos brancos e depois realizar o passo de cima
+
+semana 15/07
+--> detetor de olhos (ver ângulos da cara)
+--> teste23 (boca aberta) concluído
+--> criação de uma mascara para isolar o cabelo (primeira tentativa de resolução do teste 9)
+
+
+###########
+# IMPORTS #
+###########
+
+- sys
+- os
+- math
+- dlib
+- glob
+- cv2
+- numpy
+- PIL
