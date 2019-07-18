@@ -187,7 +187,15 @@ def test12(image, points):
     
     line = dlib.line(p1, p2)
     win.add_overlay(line)
-    return None
+
+    
+    pitch_compliance = 0 if (abs(pitch) > 5) else (-20*(abs(pitch))+100)
+    print(pitch_compliance)
+    roll_compliance = 0 if (abs(roll) > 8) else (-(100/8)*(abs(roll))+100)
+    print(roll_compliance)
+    yaw_compliance = 0 if (abs(yaw) > 5) else ((-20*abs(int(yaw)))+100)
+    print(yaw_compliance)
+    return int((pitch_compliance+roll_compliance+yaw_compliance)/3)
     
 # TEST 14 #
 
@@ -435,9 +443,8 @@ for k, d in enumerate(dets):
 eye_centre_coordinates = eye_centers(eyes)
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
 test12 = test12(image, points)
-#test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
-#test14 = test14(eyes)
-#test23 = test23(mouth)
+test14 = test14(eyes)
+test23 = test23(mouth)
 #hair = check_hair(hair_res, eyes)
 
 # write results to file
@@ -453,6 +460,8 @@ elif(teste10 == False):
     eyes_close = eye_Pcnt(thresh, eyes)
     file.write("\n")
     file.write("Test10 " + str(0))
+file.write("\n")
+file.write("Test12 " + str(test12))
 file.write("\n")
 file.write("Test14 " + str(test14))
 file.write("\n")
