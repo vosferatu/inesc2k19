@@ -125,48 +125,7 @@ def sclera_eye_region(roi, h, w):
 # TEST 12 #
 
 # test12 (roll/pitch/yaw)
-def test12(eyes, nose, mouth_upper_bound):
-    left_eye_centre = eyes[0]
-    right_eye_centre = eyes[1]
-    nose_tip_point30 = nose[0][0]
-
-    # deviation between eye centre line and  x-axis
-    deltay = (right_eye_centre[1] - left_eye_centre[1])
-    deltax = (right_eye_centre[0] - left_eye_centre[0])
-    m = float(deltay) / float(deltax)
-    angle = math.degrees(math.atan(m))
-    print(angle)
-
-    # distance between the center of the eyes and the tip of the nose
-    left_eye_distance_nose_tip = math.sqrt(((left_eye_centre[0]-nose_tip_point30.x)**2)+((left_eye_centre[1]-nose_tip_point30.y)**2))
-    print(left_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(left_eye_centre[1])), nose_tip_point30)
-    win.add_overlay(line)
-    right_eye_distance_nose_tip = math.sqrt(((right_eye_centre[0]-nose_tip_point30.x)**2)+((right_eye_centre[1]-nose_tip_point30.y)**2))
-    print(right_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(right_eye_centre[1])), nose_tip_point30)
-    win.add_overlay(line)
-
-    # distance between the center of the eyes and the upper bound of the mouth
-    left_eye_distance_mouth_upper_bound = math.sqrt(((left_eye_centre[0]-mouth_upper_bound.x)**2)+((left_eye_centre[1]-mouth_upper_bound.y)**2))
-    print(left_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(left_eye_centre[1])), mouth_upper_bound)
-    win.add_overlay(line)
-    right_eye_distance_mouth_upper_bound = math.sqrt(((right_eye_centre[0]-mouth_upper_bound.x)**2)+((right_eye_centre[1]-mouth_upper_bound.y)**2))
-    print(right_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(right_eye_centre[1])), mouth_upper_bound)
-    win.add_overlay(line)
-
-    # distance between the tip of the nose and the upper bound of the mouth.
-    nose_distance_mouth_upper_bound = math.sqrt(((nose_tip_point30.x-mouth_upper_bound.x)**2)+((nose_tip_point30.y-mouth_upper_bound.y)**2))
-    print(nose_distance_mouth_upper_bound)
-    line = dlib.line(nose_tip_point30, mouth_upper_bound)
-    win.add_overlay(line)
-
-    return None
-
-# roll,pitch,yaw
-def rpy(image, points):
+def test12(image, points):
     size = image.shape
     #2D image points. If you change the image, you need to change vector
     image_points = np.array([
@@ -215,9 +174,7 @@ def rpy(image, points):
     pitch = math.degrees(math.asin(math.sin(pitch)))
     roll = -math.degrees(math.asin(math.sin(roll)))
     yaw = math.degrees(math.asin(math.sin(yaw)))
-    print(pitch)
-    print(roll)
-    print(yaw)
+    
     # Project a 3D point (0, 0, 1000.0) onto the image plane.
     # We use this to draw a line sticking out of the nose
     (nose_end_point2D, jacobian) = cv2.projectPoints(np.array([(0.0, 0.0, 1000.0)]), rotation_vector, translation_vector, camera_matrix, dist_coeffs)
@@ -477,11 +434,11 @@ for k, d in enumerate(dets):
 # run tests
 eye_centre_coordinates = eye_centers(eyes)
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
-rpy_result = rpy(image, points)
+test12 = test12(image, points)
 #test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
 #test14 = test14(eyes)
 #test23 = test23(mouth)
-hair = check_hair(hair_res, eyes)
+#hair = check_hair(hair_res, eyes)
 
 # write results to file
 file.write(face)
