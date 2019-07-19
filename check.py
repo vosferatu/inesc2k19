@@ -25,10 +25,10 @@ def create_token(img, eye_distance):
     w = 4*eye_distance
     h = w*(4/3)
     x = w*(1/2)
-    y = w*(4/3)
-    cv2.rectangle(img,(int(x),int(y)),(int(x+w),int(y+h)),(0, 0, 0),2)
-    rect = dlib.rectangle(int(x),int(y),int(x + w), int(y + w))
-    win.add_overlay(rect)
+    y = w*(3/5)
+    print(str(x) + " " + str(y) + " " + str(w) + " " + str(h))
+    cv2.rectangle(img,(int(x),int(y)),(int(x+w),int(y+h)),(0, 255, 0),5)
+
 
 # define and return each eye centre coordinates
 def eye_centers(eyes):
@@ -470,7 +470,9 @@ eye_centre_coordinates = eye_centers(eyes)
 e_d_x = (eye_centre_coordinates[1][0]-eye_centre_coordinates[0][0])*(eye_centre_coordinates[1][0]-eye_centre_coordinates[0][0])
 e_d_y = (eye_centre_coordinates[1][1]-eye_centre_coordinates[0][1])*(eye_centre_coordinates[1][1]-eye_centre_coordinates[0][1])
 E_d = math.sqrt(e_d_x + e_d_y)
-token = create_token(gray, E_d)
+if(E_d < 60):
+    print("Size not supported")
+create_token(image, int(E_d))
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
 test12 = test12(image, points)
 test14 = test14(eyes)
