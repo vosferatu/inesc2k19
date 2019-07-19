@@ -5,11 +5,30 @@ import dlib
 import glob
 import cv2
 import numpy as np
-
+from PIL import Image
 
 #############
 # FUNCTIONS #
 #############
+
+def pic_size(h,w):
+    min_w = 567
+    max_w = 1704
+    min_h = 762
+    max_h = 2272
+    if((min_w < w < max_w) and (min_h < h < max_h)):
+        return True
+    else:
+        return False
+
+def create_token(img, eye_distance):
+    w = 4*eye_distance
+    h = w*(4/3)
+    x = w*(1/2)
+    y = w*(4/3)
+    cv2.rectangle(img,(int(x),int(y)),(int(x+w),int(y+h)),(0, 0, 0),2)
+    rect = dlib.rectangle(int(x),int(y),int(x + w), int(y + w))
+    win.add_overlay(rect)
 
 # define and return each eye centre coordinates
 def eye_centers(eyes):
@@ -125,45 +144,77 @@ def sclera_eye_region(roi, h, w):
 # TEST 12 #
 
 # test12 (roll/pitch/yaw)
-def test12(eyes, nose, mouth_upper_bound):
-    left_eye_centre = eyes[0]
-    right_eye_centre = eyes[1]
-    nose_tip_point30 = nose[0][0]
+def test12(image, points):
+    size = image.shape
+    #2D image points. If you change the image, you need to change vector
+    image_points = np.array([
+                            (points[0].x, points[0].y),     # Nose tip
+                            (points[1].x, points[1].y),     # Chin
+                            (points[2].x, points[2].y),     # Left eye left corner
+                            (points[3].x, points[3].y),     # Right eye right corne
+                            (points[4].x, points[4].y),     # Left Mouth corner
+                            (points[5].x, points[5].y)      # Right mouth corner
+                        ], dtype="double")
 
-    # deviation between eye centre line and  x-axis
-    deltay = (right_eye_centre[1] - left_eye_centre[1])
-    deltax = (right_eye_centre[0] - left_eye_centre[0])
-    m = float(deltay) / float(deltax)
-    angle = math.degrees(math.atan(m))
-    print(angle)
+    # 3D model points.
+    model_points = np.array([
+                            (0.0, 0.0, 0.0),             # Nose tip
+                            (0.0, -330.0, -65.0),        # Chin
+                            (-225.0, 170.0, -135.0),     # Left eye left corner
+                            (225.0, 170.0, -135.0),      # Right eye right corne
+                            (-150.0, -150.0, -125.0),    # Left Mouth corner
+                            (150.0, -150.0, -125.0)      # Right mouth corner
 
-    # distance between the center of the eyes and the tip of the nose
-    left_eye_distance_nose_tip = math.sqrt(((left_eye_centre[0]-nose_tip_point30.x)**2)+((left_eye_centre[1]-nose_tip_point30.y)**2))
-    print(left_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(left_eye_centre[1])), nose_tip_point30)
-    win.add_overlay(line)
-    right_eye_distance_nose_tip = math.sqrt(((right_eye_centre[0]-nose_tip_point30.x)**2)+((right_eye_centre[1]-nose_tip_point30.y)**2))
-    print(right_eye_distance_nose_tip)
-    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(right_eye_centre[1])), nose_tip_point30)
+                        ])
+
+
+    # Camera internals
+    focal_length = size[1]
+    center = (size[1]/2, size[0]/2)
+    camera_matrix = np.array(
+                         [[focal_length, 0, center[0]],
+                         [0, focal_length, center[1]],
+                         [0, 0, 1]], dtype = "double"
+                         )
+
+    #print("Camera Matrix :\n {0}".format(camera_matrix))
+
+    dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
+    (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)
+
+    #print("Rotation Vector:\n {0}".format(rotation_vector))
+    #print("Translation Vector:\n {0}".format(translation_vector))
+
+    rvec_matrix = cv2.Rodrigues(rotation_vector)[0]
+    proj_matrix = np.hstack((rvec_matrix, translation_vector))
+    eulerAngles = -cv2.decomposeProjectionMatrix(proj_matrix)[6]
+
+    pitch, yaw, roll = [math.radians(_) for _ in eulerAngles]
+    pitch = math.degrees(math.asin(math.sin(pitch)))
+    roll = -math.degrees(math.asin(math.sin(roll)))
+    yaw = math.degrees(math.asin(math.sin(yaw)))
+
+    # Project a 3D point (0, 0, 1000.0) onto the image plane.
+    # We use this to draw a line sticking out of the nose
+    (nose_end_point2D, jacobian) = cv2.projectPoints(np.array([(0.0, 0.0, 1000.0)]), rotation_vector, translation_vector, camera_matrix, dist_coeffs)
+
+    for p in image_points:
+        cv2.circle(image, (int(p[0]), int(p[1])), 3, (0,0,255), -1)
+
+    p1 = dlib.point(( int(image_points[0][0]), int(image_points[0][1])))
+    p2 = dlib.point(( int(nose_end_point2D[0][0][0]), int(nose_end_point2D[0][0][1])))
+
+    line = dlib.line(p1, p2)
     win.add_overlay(line)
 
-    # distance between the center of the eyes and the upper bound of the mouth
-    left_eye_distance_mouth_upper_bound = math.sqrt(((left_eye_centre[0]-mouth_upper_bound.x)**2)+((left_eye_centre[1]-mouth_upper_bound.y)**2))
-    print(left_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(int(left_eye_centre[0]), int(left_eye_centre[1])), mouth_upper_bound)
-    win.add_overlay(line)
-    right_eye_distance_mouth_upper_bound = math.sqrt(((right_eye_centre[0]-mouth_upper_bound.x)**2)+((right_eye_centre[1]-mouth_upper_bound.y)**2))
-    print(right_eye_distance_mouth_upper_bound)
-    line = dlib.line(dlib.point(int(right_eye_centre[0]), int(right_eye_centre[1])), mouth_upper_bound)
-    win.add_overlay(line)
 
-    # distance between the tip of the nose and the upper bound of the mouth.
-    nose_distance_mouth_upper_bound = math.sqrt(((nose_tip_point30.x-mouth_upper_bound.x)**2)+((nose_tip_point30.y-mouth_upper_bound.y)**2))
-    print(nose_distance_mouth_upper_bound)
-    line = dlib.line(nose_tip_point30, mouth_upper_bound)
-    win.add_overlay(line)
-
-    return None
+    pitch_compliance = 0 if (abs(pitch) > 5) else (-20*(abs(pitch))+100)
+    print(pitch_compliance)
+    roll_compliance = 0 if (abs(roll) > 8) else (-(100/8)*(abs(roll))+100)
+    print(roll_compliance)
+    yaw_compliance = 0 if (abs(yaw) > 5) else ((-20*abs(int(yaw)))+100)
+    print(yaw_compliance)
+    return int((pitch_compliance+roll_compliance+yaw_compliance)/3)
 
 # TEST 14 #
 
@@ -271,6 +322,56 @@ def func23(x, max):
     else:
         return percentage
 
+# HAIR TEST #
+
+# hairtest
+def check_hair(hair, eyes):
+    # left eye
+    point37 = eyes[0][1]
+    point38 = eyes[0][2]
+    point40 = eyes[0][4]
+    point41 = eyes[0][5]
+    h_left = point41.y - point37.y
+    w_left = point38.x - point37.x
+    roi_left = img[point37.y:point37.y + h_left, point37.x:point37.x + w_left]
+    left_eye_percentage = hair_eye_region(roi_left, h_left, w_left)
+    print(left_eye_percentage)
+
+    # right eye
+    point43 = eyes[1][1]
+    point44 = eyes[1][2]
+    point46 = eyes[1][4]
+    point47 = eyes[1][5]
+    h_right = point47.y - point43.y
+    w_right = point44.x - point43.x
+    roi_right = img[point43.y:point43.y +
+                    h_right, point43.x:point43.x + w_right]
+    right_eye_percentage = hair_eye_region(roi_right, h_right, w_right)
+    print(right_eye_percentage)
+
+    # draw eye region
+    rect = dlib.rectangle(point37.x, point37.y,
+                          point37.x + w_left, point37.y + h_left)
+    win.add_overlay(rect)
+    rect = dlib.rectangle(point43.x, point43.y,
+                          point43.x + w_right, point43.y + h_right)
+    win.add_overlay(rect)
+
+    return None
+
+# define eye region and return hair percentage in eye
+def hair_eye_region(roi, h, w):
+    pixel_counter = 0.00
+    hair_pixel_counter = 0.00
+    hair_percentage = 0.00
+    for k in range(0, h):
+        for j in range(0, w):
+            pixel_counter += 1
+            pixel = roi[k, j]
+            if(pixel[0] > 90 and pixel[1] > 90 and pixel[2] > 90):
+                hair_pixel_counter += 1
+    hair_percentage = hair_pixel_counter/pixel_counter
+    return hair_percentage
 
 ########
 # MAIN #
@@ -293,6 +394,12 @@ eyes = []
 eye_centre_coordinates = []
 nose_tip = []
 mouth = []
+points = []
+
+img_s = Image.open(face)
+# get the image's width and height in pixels
+width, height = img_s.size
+print(str(width) + " " + str(height))
 
 img = dlib.load_rgb_image(face)
 
@@ -302,8 +409,27 @@ image = cv2.imread(face)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+IMD = 'IMD436'
+# Remove hair with opening
+kernel = np.ones((2,2),np.uint8)
+opening = cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel, iterations = 2)
+# Blur the image for smoother ROI
+blur = cv2.blur(opening,(15,15))
+# Perform another OTSU threshold and search for biggest contour
+ret, thresh = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
+cnt = max(contours, key=cv2.contourArea)
+# Create a new mask for the result image
+h, w = image.shape[:2]
+mask = np.zeros((h, w), np.uint8)
+# Draw the contour on the new mask and perform the bitwise operation
+cv2.drawContours(mask, [cnt],-1, 255, -1)
+hair_res = cv2.bitwise_and(image, image, mask=mask)
+
+
 win.clear_overlay()
 win.set_image(img)
+#win.set_image(hair_res)
 
 # Ask the detector to find the bounding boxes of each face. The 1 in the
 # second argument indicates that we should upsample the image 1 time. This
@@ -327,35 +453,54 @@ for k, d in enumerate(dets):
     mouth.append([shape.part(61), shape.part(62), shape.part(63), shape.part(60)])
     # bottom lip landmarks
     mouth.append([shape.part(65), shape.part(66), shape.part(67), shape.part(64)])
+
+    points.append(shape.part(30))
+    points.append(shape.part(8))
+    points.append(shape.part(36))
+    points.append(shape.part(45))
+    points.append(shape.part(48))
+    points.append(shape.part(54))
     # Draw the face landmarks on the screen.
     win.add_overlay(shape)
 
 # run tests
+size = pic_size(width, height)
 eye_centre_coordinates = eye_centers(eyes)
+
+e_d_x = (eye_centre_coordinates[1][0]-eye_centre_coordinates[0][0])*(eye_centre_coordinates[1][0]-eye_centre_coordinates[0][0])
+e_d_y = (eye_centre_coordinates[1][1]-eye_centre_coordinates[0][1])*(eye_centre_coordinates[1][1]-eye_centre_coordinates[0][1])
+E_d = math.sqrt(e_d_x + e_d_y)
+token = create_token(gray, E_d)
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
-#test10 = test10(thresh, eyes)
-test12 = test12(eye_centre_coordinates, nose_tip, mouth_upper_bound)
+test12 = test12(image, points)
 test14 = test14(eyes)
 test23 = test23(mouth)
+#hair = check_hair(hair_res, eyes)
 
 # write results to file
 file.write(face)
 file.write("\n")
-file.write(str(eye_centre_coordinates[0][0]) + " " + str(eye_centre_coordinates[0][1]) +
-           " " + str(eye_centre_coordinates[1][0]) + " " + str(eye_centre_coordinates[1][1]))
-if(teste10 == True):
-    eyes_close = eye_Pcnt(thresh, eyes)
+if(size == True):
+    file.write(str(eye_centre_coordinates[0][0]) + " " + str(eye_centre_coordinates[0][1]) +
+               " " + str(eye_centre_coordinates[1][0]) + " " + str(eye_centre_coordinates[1][1]))
+    if(teste10 == True):
+        eyes_close = eye_Pcnt(thresh, eyes)
+        file.write("\n")
+        file.write("Test10 " + str(eyes_close))
+    elif(teste10 == False):
+        eyes_close = eye_Pcnt(thresh, eyes)
+        file.write("\n")
+        file.write("Test10 " + str(0))
     file.write("\n")
-    file.write("Test10 " + str(eyes_close))
-elif(teste10 == False):
-    eyes_close = eye_Pcnt(thresh, eyes)
+    file.write("Test12 " + str(test12))
     file.write("\n")
-    file.write("Test10 " + str(0))
-file.write("\n")
-file.write("Test14 " + str(test14))
-file.write("\n")
-file.write("Test23 " + str(test23))
-file.write("\n")
+    file.write("Test14 " + str(test14))
+    file.write("\n")
+    file.write("Test23 " + str(test23))
+    file.write("\n")
+else:
+    file.write("Image size not supported")
+    file.write("\n")
 
 file.close()
 

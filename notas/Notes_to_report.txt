@@ -20,6 +20,7 @@ semana 15/07
 --> detetor de olhos (ver ângulos da cara)
 --> teste23 (boca aberta) concluído
 --> criação de uma mascara para isolar o cabelo (primeira tentativa de resolução do teste 9)
+--> teste12 concluído
 
 
 ###########
@@ -34,3 +35,17 @@ semana 15/07
 - cv2
 - numpy
 - PIL
+
+###########
+# TAREFAS #
+###########
+
+ver tamanhos da imagens
+teste do token
+vggen
+keras
+resize das imagens 224x224
+criar camadas
+reterirar o que ja esta treinado
+adaptar as classes
+ground truth fazer comparaçoes
