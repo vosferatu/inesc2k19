@@ -11,6 +11,26 @@ import numpy as np
 # FUNCTIONS #
 #############
 
+# check input image dimensions
+def check_image_dimensions(image):
+    height = image.shape[0]
+    width = image.shape[1]
+
+    if(752 < width < 2272 and 567 < height < 1704):
+        return True 
+    return False
+
+# check input image file extension
+def check_image_extension(path):
+    parts = path.split("/")
+    file_name = parts[len(parts)-1]
+    extension = file_name.split(".")[1]
+    print(extension)
+    if(extension == "png" or extension == "jpg" or extension == "bmp"):
+        return True 
+    return False
+
+
 # define and return each eye centre coordinates
 def eye_centers(eyes):
     # left eye
@@ -190,11 +210,8 @@ def test12(image, points):
 
     
     pitch_compliance = 0 if (abs(pitch) > 5) else (-20*(abs(pitch))+100)
-    print(pitch_compliance)
     roll_compliance = 0 if (abs(roll) > 8) else (-(100/8)*(abs(roll))+100)
-    print(roll_compliance)
     yaw_compliance = 0 if (abs(yaw) > 5) else ((-20*abs(int(yaw)))+100)
-    print(yaw_compliance)
     return int((pitch_compliance+roll_compliance+yaw_compliance)/3)
     
 # TEST 14 #
@@ -358,6 +375,9 @@ def hair_eye_region(roi, h, w):
 # MAIN #
 ########
 
+# RetVal 
+RetVal = 1
+
 # paths to files
 predictor_path = 'shape_predictor_68_face_landmarks.dat'
 face = sys.argv[1]
@@ -378,10 +398,29 @@ mouth = []
 points = []
 
 img = dlib.load_rgb_image(face)
+image = cv2.imread(face)
+
+# check image dimensions
+if(not check_image_dimensions(image)):
+    RetVal = -1
+    file.write(face)
+    file.write("\n")
+    file.write(str(RetVal))
+    file.write("\n")
+    sys.exit(0)
+
+# check image file extension
+if(not check_image_extension(face)):
+    RetVal = -2
+    file.write(face)
+    file.write("\n")
+    file.write(str(RetVal))
+    file.write("\n")
+    sys.exit(0)
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
-image = cv2.imread(face)
+
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
@@ -449,6 +488,8 @@ test23 = test23(mouth)
 
 # write results to file
 file.write(face)
+file.write("\n")
+file.write(str(RetVal))
 file.write("\n")
 file.write(str(eye_centre_coordinates[0][0]) + " " + str(eye_centre_coordinates[0][1]) +
            " " + str(eye_centre_coordinates[1][0]) + " " + str(eye_centre_coordinates[1][1]))
