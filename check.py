@@ -5,7 +5,7 @@ import dlib
 import glob
 import cv2
 import numpy as np
-from PIL import Image
+#from PIL import Image
 
 #############
 # FUNCTIONS #
@@ -21,13 +21,20 @@ def pic_size(h,w):
     else:
         return False
 
-def create_token(img, eye_distance):
+def create_token(eye_centre, eye_distance):
     w = 4*eye_distance
-    h = w*(4/3)
-    x = w*(1/2)
-    y = w*(3/5)
-    print(str(x) + " " + str(y) + " " + str(w) + " " + str(h))
-    cv2.rectangle(img,(int(x),int(y)),(int(x+w),int(y+h)),(0, 255, 0),5)
+    h = w*4/3
+
+    corner_x = eye_centre.x - (w/2)
+    corner_y = eye_centre.y - (3*w/5)
+
+    x = w*1/2
+    y = w*3/5
+
+    rect = dlib.rectangle(corner_x, corner_y, corner_x + w, corner_y + h)
+    win.add_overlay(rect)
+
+    
 
 
 # define and return each eye centre coordinates
@@ -209,11 +216,8 @@ def test12(image, points):
 
 
     pitch_compliance = 0 if (abs(pitch) > 5) else (-20*(abs(pitch))+100)
-    print(pitch_compliance)
     roll_compliance = 0 if (abs(roll) > 8) else (-(100/8)*(abs(roll))+100)
-    print(roll_compliance)
     yaw_compliance = 0 if (abs(yaw) > 5) else ((-20*abs(int(yaw)))+100)
-    print(yaw_compliance)
     return int((pitch_compliance+roll_compliance+yaw_compliance)/3)
 
 # TEST 14 #
@@ -396,16 +400,16 @@ nose_tip = []
 mouth = []
 points = []
 
-img_s = Image.open(face)
+image = cv2.imread(face)
 # get the image's width and height in pixels
-width, height = img_s.size
+width, height, _ = image.shape
 print(str(width) + " " + str(height))
 
 img = dlib.load_rgb_image(face)
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
-image = cv2.imread(face)
+
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
@@ -460,6 +464,9 @@ for k, d in enumerate(dets):
     points.append(shape.part(45))
     points.append(shape.part(48))
     points.append(shape.part(54))
+
+    # eye centre point 
+    eye_center_point = shape.part(27)
     # Draw the face landmarks on the screen.
     win.add_overlay(shape)
 
@@ -472,7 +479,7 @@ e_d_y = (eye_centre_coordinates[1][1]-eye_centre_coordinates[0][1])*(eye_centre_
 E_d = math.sqrt(e_d_x + e_d_y)
 if(E_d < 60):
     print("Size not supported")
-create_token(image, int(E_d))
+create_token(eye_center_point, int(E_d))
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
 test12 = test12(image, points)
 test14 = test14(eyes)
