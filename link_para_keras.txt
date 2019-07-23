@@ -3,3 +3,5 @@ Neste link tem tutoriais de CNN se quiserem seguir
 https://www.youtube.com/channel/UC4UJ26WkceqONNF5S26OiVw
 
 https://www.youtube.com/watch?v=H8sXcAXrGR4
+
+https://github.com/Hvass-Labs/TensorFlow-Tutorials/blob/master/10_Fine-Tuning.ipynb
