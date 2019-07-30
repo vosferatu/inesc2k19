@@ -21,20 +21,81 @@ def pic_size(h,w):
     else:
         return False
 
-def create_token(eye_centre, eye_distance):
+def create_token(image, eyes, eye_centre, eye_distance):
+    predictor_path = 'shape_predictor_68_face_landmarks.dat'
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(predictor_path)
+
+    # rotating the image
+    rows,cols, _ = image.shape
+    delta_y = float(eyes[1][1] - eyes[0][1])
+    delta_x = float(eyes[1][0] - eyes[0][0])
+    m = delta_y / delta_x
+    deg = m * 180 / math.pi
+    M = cv2.getRotationMatrix2D((cols/2,rows/2),deg,1)
+    rotated_image = cv2.warpAffine(image,M,(cols,rows))
+
+    #win.set_image(rotated_image)
+
+    # detection of landmarks in the rotated image
+    rotated_eye_center_point = []
+    dets = detector(rotated_image, 1)
+    if(len(dets) == 0):
+        print("Rotation error")
+
+    for k, d in enumerate(dets):
+        # Get the landmarks/parts for the face in box d.
+        shape = predictor(rotated_image, d)
+
+        # eye centre point 
+        rotated_eye_center_point = shape.part(27)
+    
     w = 4*eye_distance
     h = w*4/3
 
-    corner_x = eye_centre.x - (w/2)
-    corner_y = eye_centre.y - (3*w/5)
+    corner_x = rotated_eye_center_point.x - (w/2)
+    corner_y = rotated_eye_center_point.y - (3*w/5)
+    #top_left_corner_point = dlib.point(corner_x,corner_y)
 
-    x = w*1/2
-    y = w*3/5
+    roi_token = rotated_image[corner_y:corner_y+h, corner_x:corner_x+w]
+    # detection of landmarks in the tokenized rotated image
+    rotated_eye_center_point = []
+    dets = detector(roi_token, 1)
+    if(len(dets) == 0):
+        print("Token error")
 
-    rect = dlib.rectangle(corner_x, corner_y, corner_x + w, corner_y + h)
-    win.add_overlay(rect)
+    for k, d in enumerate(dets):
+        # Get the landmarks/parts for the face in box d.
+        shape = predictor(roi_token, d)
 
+        # eye centre point 
+        rotated_eye_center_point = shape.part(27)
     
+    print("Token OK")
+    #top_right_corner_point = dlib.point(corner_x + w,corner_y)
+    #bottom_left_corner_point = dlib.point(corner_x,corner_y + h)
+    #bottom_right_corner_point = dlib.point(corner_x + w,corner_y + h)
+
+    #vert_line1 = dlib.line(top_left_corner_point, bottom_left_corner_point)
+    #vert_line2 = dlib.line(top_right_corner_point, bottom_right_corner_point)
+    #hor_line1 = dlib.line(top_left_corner_point, top_right_corner_point)
+    #hor_line2 = dlib.line(bottom_left_corner_point, bottom_right_corner_point)
+
+    #rect = dlib.rectangle(corner_x, corner_y, corner_x + w, corner_y + h)
+
+    #win.add_overlay(vert_line1, dlib.rgb_pixel(0,0,0))
+    #win.add_overlay(vert_line2, dlib.rgb_pixel(0,0,0))
+    #win.add_overlay(hor_line1, dlib.rgb_pixel(0,0,0))
+    #win.add_overlay(hor_line2, dlib.rgb_pixel(0,0,0))
+    return True
+# check input image file extension
+def check_image_extension(path):
+    parts = path.split("/")
+    file_name = parts[len(parts)-1]
+    extension = file_name.split(".")[1]
+    if(extension == "png" or extension == "jpg" or extension == "bmp"):
+        return True 
+    return False
 
 
 # define and return each eye centre coordinates
@@ -81,7 +142,6 @@ def test10(faces, img, eye_cascade):
         return True
     else:
         return False
-
 
 # test10 (closed eyes)
 def eye_Pcnt(gray, eyes):
@@ -308,23 +368,24 @@ def test23(mouth):
 
     # left side distance
     left_d = point67.y - point61.y
-    left_percentage = func23(left_d, width)
+    left_percentage = func23_percentage(left_d, width)
     # centre distance
     centre_d = point66.y - point62.y
-    centre_percentage = func23(centre_d, width)
+    centre_percentage = func23_percentage(centre_d, width)
     # right side distance
     right_d = point65.y - point63.y
-    right_percentage = func23(right_d, width)
+    right_percentage = func23_percentage(right_d, width)
 
-    return int((left_percentage + centre_percentage + right_percentage)/3)
+    total = int((left_percentage + centre_percentage + right_percentage)/3)
+    return total
 
 # function to convert open mouth percentage to compliance value
-def func23(x, max):
+def func23_percentage(x, max):
     percentage = (x*100) / max
     if(percentage < 0):
-        return 0
+        return 100
     else:
-        return percentage
+        return 100 - percentage
 
 # HAIR TEST #
 
@@ -381,6 +442,8 @@ def hair_eye_region(roi, h, w):
 # MAIN #
 ########
 
+RetVal = 1
+
 # paths to files
 predictor_path = 'shape_predictor_68_face_landmarks.dat'
 face = sys.argv[1]
@@ -402,10 +465,17 @@ points = []
 
 image = cv2.imread(face)
 # get the image's width and height in pixels
-width, height, _ = image.shape
-print(str(width) + " " + str(height))
-
+height, width, _ = image.shape
 img = dlib.load_rgb_image(face)
+
+# check image file extension
+if(not check_image_extension(face)):
+    RetVal = -2
+    file.write(face)
+    file.write("\n")
+    file.write(str(RetVal))
+    file.write("\n")
+    sys.exit(0)
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
@@ -439,10 +509,19 @@ win.set_image(img)
 # second argument indicates that we should upsample the image 1 time. This
 # will make everything bigger and allow us to detect more faces.
 dets = detector(img, 1)
+if(len(dets) == 0):
+    RetVal = -3
+    file.write(face)
+    file.write("\n")
+    file.write(str(RetVal))
+    file.write("\n")
+    sys.exit(0)
+
 print("Number of faces detected: {}".format(len(dets)))
 for k, d in enumerate(dets):
     # Get the landmarks/parts for the face in box d.
     shape = predictor(img, d)
+
     # left eye landmarks
     eyes.append([shape.part(36), shape.part(37), shape.part(38), shape.part(39),
                  shape.part(40), shape.part(41)])
@@ -479,17 +558,18 @@ e_d_y = (eye_centre_coordinates[1][1]-eye_centre_coordinates[0][1])*(eye_centre_
 E_d = math.sqrt(e_d_x + e_d_y)
 if(E_d < 60):
     print("Size not supported")
-create_token(eye_center_point, int(E_d))
+create_token(image, eye_centre_coordinates, eye_center_point, int(E_d))
 teste10 = test10(faces, image, eye_cascade) # ESTA A DETETAR OS OLHOS COM UMA haarcascade_eye FILE
 test12 = test12(image, points)
 test14 = test14(eyes)
 test23 = test23(mouth)
-#hair = check_hair(hair_res, eyes)
 
 # write results to file
 file.write(face)
 file.write("\n")
 if(size == True):
+    file.write(str(RetVal))
+    file.write("\n")
     file.write(str(eye_centre_coordinates[0][0]) + " " + str(eye_centre_coordinates[0][1]) +
                " " + str(eye_centre_coordinates[1][0]) + " " + str(eye_centre_coordinates[1][1]))
     if(teste10 == True):
@@ -508,8 +588,10 @@ if(size == True):
     file.write("Test23 " + str(test23))
     file.write("\n")
 else:
-    file.write("Image size not supported")
+    RetVal = -1
+    file.write(str(RetVal))
     file.write("\n")
+    sys.exit(0)
 
 file.close()
 
